@@ -1,0 +1,7 @@
+psycopg2--binary==2.9.7
+mysql-connector-python==8.1.0
+ConfigSpace==0.7.1
+smac==2.0.2
+tiktoken==0.5.1
+openai==0.28.0
+matplotlib==3.8.2
