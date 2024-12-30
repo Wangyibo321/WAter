@@ -104,3 +104,87 @@ We compare WAter with baselines on PostgreSQL, and use TPC-DS, JOB, TPC-H and TP
 
 <img src="/assets/result.png" alt="result" width="1000">
 
+## Code Structure
+
+- `configs/`
+	- `postgres.ini`: Configuration file to optimize PostgreSQL
+	- `water_params.ini`: Configuration file to determine WAter's hyper-parameters
+- `gsum_init_sql/`
+	- `job/`
+	  - `job_0.2.json`: Initial subset given by GSUM with `comp_ratio=0.2`
+	  - `job_0.3.json`: Initial subset given by GSUM with `comp_ratio=0.3`
+	
+	- `tpcds_select/`
+	  - `tpcds_select_0.2.json`: Initial subset given by GSUM with `comp_ratio=0.2`
+	  - `tpcds_select_0.3.json`: Initial subset given by GSUM with `comp_ratio=0.3`
+	
+	- `tpch/`
+	  - `tpch_0.2.json`: Initial subset given by GSUM with `comp_ratio=0.2`
+	  - `tpch_0.3.json`: Initial subset given by GSUM with `comp_ratio=0.3`
+	
+	- `tpchx10/`
+	  - `tpchx10_0.2.json`: Initial subset given by GSUM with `comp_ratio=0.2`
+	  - `tpchx10_0.3.json`: Initial subset given by GSUM with `comp_ratio=0.3`
+	
+
+
+- `knowledge_collection/`
+  - `postgres/`
+    - `target_knobs.txt`: List of target knobs for PostgreSQL tuning
+    - `knob_info/`
+      - `system_view.json`: Information from PostgreSQL system views (pg_settings)
+      - `official_document.json`: Information from PostgreSQL official documentation
+    - `knowledge_sources/`
+      - `gpt/`: Knowledge sourced from GPT models
+      - `manual/`: Knowledge from DBMS manuals
+      - `web/`: Knowledge extracted from web sources
+      - `dba/`: Knowledge from database administrators
+    - `tuning_lake/`: Data lake for DBMS tuning knowledge
+    - `structured_knowledge/`
+      - `special/`: Specialized structured knowledge
+      - `normal/`: General structured knowledge
+- `optimization_results/`
+	- `postgres/`
+	    - `coarse/`: Coarse-stage optimization results for PostgreSQL
+	    - `fine/`: Fine-stage optimization results for PostgreSQL
+	    - `log/`: Optimization logs for PostgreSQL
+	    - `single/`: WAter optimization results for PostgreSQL
+	    - `smac/`: SMAC optimization results for PostgreSQL
+- `scripts/`
+	- `recover_postgres.sh`: Script to recover the state of PostgreSQL database
+- `src/`
+	- `dbms/`
+	    - `dbms_template.py`: Template for database management systems
+	    - `postgres.py`: Implementation for PostgreSQL
+	- `run/`
+	    - `vanilla_tuner/`
+	        - `run_gptuner.py`: Run vanilla GPTuner
+	        - `run_smac.py`: Run vanilla SMAC
+	    - `WAter/`
+	        - `run_gptuner.py`: Run GPTuner-based WAter
+	        - `run_smac.py`: Run SMAC-based WAter
+	- `space_optimizer/`
+	    - `gptuner_space/`
+	        - `knob_selection.py`: Module for knob selection
+	        - `coarse_space.py`: Definition of coarse search space
+	        - `fine_space.py`: Definition of fine search space
+	    - `default_space.py`: Definition of default search space
+	- `vanilla_tuner/`
+	    - `gptuner/`
+	        - `coarse_stage.py`: Recommender for coarse stage configuration
+	        - `fine_stage.py`: Recommender for fine stage configuration
+	    - `smactuner/`
+	        - `smactuner.py`: Recommender for SMAC
+	- `WAter/`
+	    - `workload_compression.py`: Module for workload compression (**Sec. 5**)
+	    - `history_reuse.py`: Module for history reuse mechanism in subset tuning (**Sec. 6**)
+	    - `config_verification.py`: Module for verify promising configurations (**Sec. 7**)
+	- `WAter_runner/`
+	    - `runner_template.py`: Template for integrating a knob tuning method with WAter
+	    - `runner_gptuner.py`: Implementation for “WAter + GPTuner”
+	    - `runner_smac.py`: Implementation for “WAter + SMAC”
+- `workload/`
+    - `job/`: SQL statements from JOB
+    - `tpcds_select/`: SQL statements from TPC-DS (selected)
+    - `tpch/`: 1 SQL statements for each of the 22 templates from TPC-H
+    - `tpchx10/`:  10 randomly generated SQL statements for each of the 22 templates from TPC-H

@@ -55,6 +55,7 @@ class PgDBMS(DBMSTemplate):
         self.clear_config()
         
     def reconfigure(self):
+        # return 1111
         """ 
             Restart to make parameter settings take effect. Returns true if successful.
             The configuration could make the dbms crash, so that maybe we need recovery operation.
@@ -133,6 +134,7 @@ class PgDBMS(DBMSTemplate):
         return row is not None
 
     def exec_queries(self, sql):
+        # return 111
         """ Executes all SQL queries in given file and returns success flag. """
         try:
             self.connection.autocommit = True

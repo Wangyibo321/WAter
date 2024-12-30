@@ -28,13 +28,10 @@ class DefaultSpace:
         self.target_knobs_path = target_knobs_path
         self.round = 0
         self.summary_path = "./optimization_results/temp_results"
-        self.benchmark_copy_db = ['tpcc', 'twitter', "sibench", "voter", "tatp", "smallbank", "seats"]   # Some benchmark will insert or delete data, Need to be rewrite each time.
         self.benchmark_latency = ['tpch']
         self.search_space = ConfigurationSpace()
         self.skill_path = f"./knowledge_collection/{self.dbms.name}/structured_knowledge/normal"
         self.target_knobs = self.knob_select()
-        self.penalty = self.get_default_result()
-        print(f"DEFAULT : {self.penalty}")
         self.log_file = f"./optimization_results/{self.dbms.name}/log/{self.seed}_log.txt"
         self.init_log_file()
         self.prev_end = 0
@@ -149,37 +146,26 @@ class DefaultSpace:
             )
         return knob
 
-    def get_default_result(self):
-        return 1000000 ################
-        print("Test the result in default conf")        
-        dbms = self.dbms
-        # self.round += 1
-        print(f"Tuning round {self.round} ...")
-        print(f"--- Restore the dbms to default configuration ---")
-        dbms.reset_config()
-            
-        dbms.reconfigure()
-        start_ms = time.time() * 1000.0
-        flag = dbms.exec_quries(self.workload_queries)
-        end_ms = time.time() * 1000.0
-        execution_time = end_ms - start_ms
-        if flag:   # run successfully
-            self.penalty = execution_time
-        return execution_time
-
     def run_sql_with_timeout(self, timeout_seconds):
         result_queue = multiprocessing.Queue()
+
         def task_wrapper():
             print("HHH")
             result = self.run_sqls()
             result_queue.put(result)
+
         p = multiprocessing.Process(target=task_wrapper)
         p.start()
         p.join(timeout_seconds)
+
         if p.is_alive():
             p.terminate()
             p.join()
-            return 1000000 
+            if not result_queue.empty():
+                sql_exec_time = result_queue.get()
+            else:
+                sql_exec_time = self.timeout
+            return sql_exec_time
         else:
             return result_queue.get()
         
@@ -192,12 +178,13 @@ class DefaultSpace:
         if flag: 
             return execution_time
         else:
-            return 1000000
+            return self.timeout
         
     def run_sqls(self):
+        start_run_time = time.time()
         dbms = self.dbms
-        total_time = 0
-        flag = False
+        sql_exec_time = 0
+
         if os.path.exists(self.record_single_path):
             with open(self.record_single_path, 'r') as f:
                 result = json.load(f)
@@ -210,29 +197,29 @@ class DefaultSpace:
         for (j, sql) in self.workload_queries.items():
             if j in result["data"][self.round]:
                 continue
-
             t = self.test(sql)
             print(f"TIME{j}:{t}")
             result["data"][self.round][j] = t
-            total_time += t
-            if t == 1000000:
-                flag = True
-                return 1000000
+            sql_exec_time += t
 
         with open(self.record_single_path, 'w') as f:
             json.dump(result, f, indent=4)
             print(f"SAVE: {self.round}")
             print(self.record_single_path)
-        return total_time
+        actual_run_time = time.time() - start_run_time
+
+        return sql_exec_time
 
 
 
     def set_and_replay(self, config, seed=0):
         begin_time = time.time()
-        cost = self.set_and_replay_ori(config, seed)
+        #cost = self.set_and_replay_ori(config, seed)
+        total_sql_exec_time = self.set_and_replay_ori(config, seed)
         end_time = time.time()
         self._log(begin_time, end_time)
-        return cost
+        #return cost
+        return total_sql_exec_time
 
 
     def set_and_replay_ori(self, config, seed=0):
@@ -254,13 +241,13 @@ class DefaultSpace:
                 value = config[knob]
             dbms.set_knob(knob, value)
             
-        if dbms.reconfigure(): # 配置合法
-            print("RRRR")
-            result = self.run_sql_with_timeout(self.timeout)
-            return result
+        if dbms.reconfigure():
+            print("----- Executing workload on current configuration -----")
+            total_sql_exec_time = self.run_sql_with_timeout(self.timeout)
 
+            return total_sql_exec_time
         else:
-            return 1000000
+            return self.timeout
 
 
     @abstractmethod
